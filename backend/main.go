@@ -1,20 +1,41 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
 	"net/http"
 )
 
-func helloWorld(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello World!")
+type HelloResponse struct {
+	Message string `json:"message"`
+	Status  int    `json:"status"`
+}
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	response := HelloResponse{
+		Message: "Hello, World!",
+		Status:  http.StatusOK,
+	}
+
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "Failed to encode JSON"}`))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
 }
 
 func main() {
-	address := "5000"
+	address := ":5000"
 	urlPrefix := "/api/1.0"
 
-	http.HandleFunc(urlPrefix+"/", helloWorld)
+	http.HandleFunc(urlPrefix+"/", indexHandler)
 
-	fmt.Printf("Listening to address: http://localhost:%s\n", address)
-	http.ListenAndServe(":"+address, nil)
+	log.Printf("Server starting on: http://localhost%s\n", address)
+	http.ListenAndServe(address, nil)
 }

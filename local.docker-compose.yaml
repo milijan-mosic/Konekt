@@ -1,0 +1,80 @@
+services:
+  server:
+    image: caddy:2.10-alpine
+    container_name: server
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./server/local.Caddyfile:/etc/caddy/Caddyfile
+    networks:
+      - konekt
+
+  database:
+    image: postgres:17.5
+    container_name: database
+    restart: on-failure
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: konekt_db
+    volumes:
+      - database:/var/lib/postgresql/data
+    depends_on:
+      - server
+    networks:
+      - konekt
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: on-failure
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@konekt.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    depends_on:
+      - server
+      - database
+    networks:
+      - konekt
+
+  api:
+    image: api:latest
+    container_name: api
+    restart: on-failure
+    build:
+      context: ./backend
+      dockerfile: images/local.Dockerfile
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - server
+      - database
+    networks:
+      - konekt
+
+  www:
+    image: www:latest
+    container_name: www
+    restart: on-failure
+    build:
+      context: ./frontend
+      dockerfile: images/local.Dockerfile
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - server
+      - database
+      - api
+    networks:
+      - konekt
+
+volumes:
+  database:
+  pgadmin:
+
+networks:
+  konekt:
